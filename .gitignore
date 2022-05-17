@@ -1,0 +1,21 @@
+# Images
+images_01/*.png
+images_02/*.png
+example_images/*.png
+
+# Binaries
+bin/*
+
+# Python stuff
+*.pyc
+*.py~
+*.pth
+
+# VSCode
+*.vscode
+
+# ??? files
+scores.txt
+deltas.txt
+compare.txt
+compare_new.txt

@@ -2,6 +2,7 @@
 images_01/*.png
 images_02/*.png
 example_images/*.png
+crop/*.png
 
 # Binaries
 bin/*

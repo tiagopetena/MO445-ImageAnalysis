@@ -21,57 +21,66 @@
  */
 
 /* it returns pixels at the border of the image */
-
 iftSet *MyImageBorder(iftImage *bin)
 {
+   iftImage *imgBorder;
+   return imgBorder;
 }
 
 /* it returns a set with internal border pixels */
-
 iftSet *MyObjectBorder(iftImage *bin)
 {
+   iftImage *objBorder;
+   return objBorder;
 }
 
 /* it returns a set with external border pixels */
-
 iftSet *MyBackgroundBorder(iftImage *bin)
 {
+   iftImage *bgBorder;
+   return bgBorder;
 }
 
 /* it dilates objects */
-
 iftImage *MyDilateBin(iftImage *bin, iftSet **S, float radius)
 {
+   iftImage *dilatedBin = iftCopyImage(bin);
+   return dilatedBin;
 }
 
 /* it erodes objects */
-
 iftImage *MyErodeBin(iftImage *bin, iftSet **S, float radius)
 {
+   iftImage *erodedBin;
+   return erodedBin;
 }
 
 /* it executes dilation followed by erosion */
-
 iftImage *MyCloseBin(iftImage *bin, float radius)
 {
+   iftImage *closedBin;
+   return closedBin;
 }
 
 /* it executes erosion followed by dilation */
-
 iftImage *MyOpenBin(iftImage *bin, float radius)
 {
+   iftImage *openBin;
+   return openBin;
 }
 
 /* it executes closing followed by opening */
-
 iftImage *MyAsfCOBin(iftImage *bin, float radius)
 {
+   iftImage *asfBin;
+   return asfBin;
 }
 
 /* it closes holes in objects */
-
 iftImage *MyCloseBasins(iftImage *bin)
 {
+   iftImage *closedBasins;
+   return closedBasins;
 }
 
 int main(int argc, char *argv[])
@@ -117,6 +126,9 @@ int main(int argc, char *argv[])
       /* remove noise components from the background */
       iftImage *aux2 = iftSelectCompAboveArea(aux1, B, 100);
       iftDestroyImage(&aux1);
+      sprintf(filename, "%s/%s_select.png", out_dir, basename);
+      iftWriteImageByExt(aux2, filename);
+
       /* apply morphological filtering to make the fingerprint the
          largest component: this operation must add frame and remove it
          afterwards. */

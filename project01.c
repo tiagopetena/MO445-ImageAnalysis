@@ -20,6 +20,49 @@
    have a four-neighbor inside an object.
  */
 
+struct CostMap {
+   int **costs;
+   int size;
+};
+
+struct CostMap *createCostMap(int mapSize) {
+   struct CostMap *C = malloc(sizeof(struct CostMap));
+   int **costs = malloc(mapSize * sizeof(int*));
+   C->costs = costs;
+   C->size = mapSize;
+
+   for (int n = 0; n < mapSize; n++) {
+      *costs = NULL;
+   }
+
+   return C;
+}
+
+int destroyCostMap(struct CostMap *C) {
+
+   for (int n = 0; n < C->size; n++) {
+      if (C->costs[n] != NULL) {
+         free(C->costs[n]);
+      }
+   }
+   free(C);
+
+   return 0;
+}
+
+void setCost(struct CostMap *C, int n, int cost) {
+   if (C->costs[n] == NULL) {
+      C->costs[n] = malloc(sizeof(int));
+   }
+   *C->costs[n] = cost; 
+}
+
+int getCost(struct CostMap *C, int n) {
+   int cost = *C->costs[n];
+
+   return cost;
+}
+
 /* it returns pixels at the border of the image */
 iftSet *MyImageBorder(iftImage *bin)
 {
@@ -45,6 +88,24 @@ iftSet *MyBackgroundBorder(iftImage *bin)
 iftImage *MyDilateBin(iftImage *bin, iftSet **S, float radius)
 {
    iftImage *dilatedBin = iftCopyImage(bin);
+   int n_pixels = bin->n;
+   struct CostMap *C = createCostMap(n_pixels);
+
+
+   // Iterate over image
+   for (int p = 0; p < n_pixels; p++)
+   {
+      C[p] = 4294967295;
+      iftVoxel voxel = iftGetVoxelCoord(bin, p);
+      
+      // if (iftValidVoxel(img, v))
+      // {
+      //   int q = iftGetVoxelIndex(img, v);
+      //   if (img->val[q] > res->val[p])
+      //     res->val[p] = img->val[q];
+      // }
+      
+   }
    return dilatedBin;
 }
 
@@ -124,7 +185,7 @@ int main(int argc, char *argv[])
       /* binarize image */
       iftImage *aux1 = iftBelowAdaptiveThreshold(norm, NULL, A, 0.98, 2, 255);
       /* remove noise components from the background */
-      iftImage *aux2 = iftSelectCompAboveArea(aux1, B, 100);
+      iftImage *aux2 = iftSelectCompAboveArea(aux1,B , 100);
       iftDestroyImage(&aux1);
       sprintf(filename, "%s/%s_select.png", out_dir, basename);
       iftWriteImageByExt(aux2, filename);

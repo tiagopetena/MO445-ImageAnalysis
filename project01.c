@@ -99,16 +99,13 @@ iftSet *MyBackgroundBorder(iftImage *bin)
         {
             for (int adj_idx = 0; adj_idx <= A1->n; adj_idx++)
             {
-                // printf("ADJ\n");
                 iftVoxel v_center = iftGetVoxelCoord(bin, p);
                 iftVoxel adj_voxel = iftGetAdjacentVoxel(A1, v_center, adj_idx);
-                // printf("got %d\n", adj_voxel.t);
                 if (iftValidVoxel(bin, adj_voxel))
                 {
                     int voxel_idx = iftGetVoxelIndex(bin, adj_voxel);
                     if (bin->val[voxel_idx] == 0)
                     {
-                        // printf("Inserting\n");
                         iftInsertSet(&BG_Set, voxel_idx);
                     }
                 }

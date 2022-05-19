@@ -20,28 +20,34 @@
    have a four-neighbor inside an object.
  */
 
-struct CostMap {
+struct CostMap
+{
    int **costs;
    int size;
 };
 
-struct CostMap *createCostMap(int mapSize) {
+struct CostMap *createCostMap(int mapSize)
+{
    struct CostMap *C = malloc(sizeof(struct CostMap));
-   int **costs = malloc(mapSize * sizeof(int*));
+   int **costs = malloc(mapSize * sizeof(int *));
    C->costs = costs;
    C->size = mapSize;
 
-   for (int n = 0; n < mapSize; n++) {
+   for (int n = 0; n < mapSize; n++)
+   {
       *costs = NULL;
    }
 
    return C;
 }
 
-int destroyCostMap(struct CostMap *C) {
+int destroyCostMap(struct CostMap *C)
+{
 
-   for (int n = 0; n < C->size; n++) {
-      if (C->costs[n] != NULL) {
+   for (int n = 0; n < C->size; n++)
+   {
+      if (C->costs[n] != NULL)
+      {
          free(C->costs[n]);
       }
    }
@@ -50,14 +56,17 @@ int destroyCostMap(struct CostMap *C) {
    return 0;
 }
 
-void setCost(struct CostMap *C, int n, int cost) {
-   if (C->costs[n] == NULL) {
+void setCost(struct CostMap *C, int n, int cost)
+{
+   if (C->costs[n] == NULL)
+   {
       C->costs[n] = malloc(sizeof(int));
    }
-   *C->costs[n] = cost; 
+   *C->costs[n] = cost;
 }
 
-int getCost(struct CostMap *C, int n) {
+int getCost(struct CostMap *C, int n)
+{
    int cost = *C->costs[n];
 
    return cost;
@@ -80,31 +89,48 @@ iftSet *MyObjectBorder(iftImage *bin)
 /* it returns a set with external border pixels */
 iftSet *MyBackgroundBorder(iftImage *bin)
 {
-   iftImage *bgBorder;
-   return bgBorder;
+    iftSet *BG_Set = NULL;
+    iftAdjRel *A1 = iftCircular(1.0);
+    int binSize = bin->n;
+
+    for (int p = 0; p < binSize; p++)
+    {
+        if (bin->val[p] != 0)
+        {
+            for (int adj_idx = 0; adj_idx <= A1->n; adj_idx++)
+            {
+                // printf("ADJ\n");
+                iftVoxel v_center = iftGetVoxelCoord(bin, p);
+                iftVoxel adj_voxel = iftGetAdjacentVoxel(A1, v_center, adj_idx);
+                // printf("got %d\n", adj_voxel.t);
+                if (iftValidVoxel(bin, adj_voxel))
+                {
+                    int voxel_idx = iftGetVoxelIndex(bin, adj_voxel);
+                    if (bin->val[voxel_idx] == 0)
+                    {
+                        // printf("Inserting\n");
+                        iftInsertSet(&BG_Set, voxel_idx);
+                    }
+                }
+            }
+        }
+    }
+
+    return BG_Set;
 }
 
-/* it dilates objects */
 iftImage *MyDilateBin(iftImage *bin, iftSet **S, float radius)
 {
    iftImage *dilatedBin = iftCopyImage(bin);
    int n_pixels = bin->n;
    struct CostMap *C = createCostMap(n_pixels);
 
+   // Get External border
+   S = MyBackgroundBorder(bin);
 
    // Iterate over image
    for (int p = 0; p < n_pixels; p++)
    {
-      C[p] = 4294967295;
-      iftVoxel voxel = iftGetVoxelCoord(bin, p);
-      
-      // if (iftValidVoxel(img, v))
-      // {
-      //   int q = iftGetVoxelIndex(img, v);
-      //   if (img->val[q] > res->val[p])
-      //     res->val[p] = img->val[q];
-      // }
-      
    }
    return dilatedBin;
 }
@@ -112,35 +138,55 @@ iftImage *MyDilateBin(iftImage *bin, iftSet **S, float radius)
 /* it erodes objects */
 iftImage *MyErodeBin(iftImage *bin, iftSet **S, float radius)
 {
-   iftImage *erodedBin;
+   iftImage *erodedBin = iftCopyImage(bin);
    return erodedBin;
 }
 
 /* it executes dilation followed by erosion */
 iftImage *MyCloseBin(iftImage *bin, float radius)
 {
-   iftImage *closedBin;
+   iftImage *dilatedBin, *closedBin;
+   iftSet *S = NULL;
+
+   dilatedBin = MyDilateBin(bin, &S, radius);
+   closedBin = MyErodeBin(dilatedBin, &S, radius);
+
+   free(dilatedBin);
+
    return closedBin;
 }
 
 /* it executes erosion followed by dilation */
 iftImage *MyOpenBin(iftImage *bin, float radius)
 {
-   iftImage *openBin;
+   iftImage *erodedBin, *openBin;
+   iftSet *S = NULL;
+
+   erodedBin = MyErodeBin(bin, &S, radius);
+   openBin = MyDilateBin(erodedBin, &S, radius);
+
+   free(erodedBin);
+
    return openBin;
 }
 
 /* it executes closing followed by opening */
 iftImage *MyAsfCOBin(iftImage *bin, float radius)
 {
-   iftImage *asfBin;
-   return asfBin;
+   iftImage *closedBin, *asfCOBin;
+
+   closedBin = MyCloseBin(bin, radius);
+   asfCOBin = MyOpenBin(closedBin, radius);
+
+   free(closedBin);
+
+   return asfCOBin;
 }
 
 /* it closes holes in objects */
 iftImage *MyCloseBasins(iftImage *bin)
 {
-   iftImage *closedBasins;
+   iftImage *closedBasins = iftCopyImage(bin);
    return closedBasins;
 }
 
@@ -185,7 +231,7 @@ int main(int argc, char *argv[])
       /* binarize image */
       iftImage *aux1 = iftBelowAdaptiveThreshold(norm, NULL, A, 0.98, 2, 255);
       /* remove noise components from the background */
-      iftImage *aux2 = iftSelectCompAboveArea(aux1,B , 100);
+      iftImage *aux2 = iftSelectCompAboveArea(aux1, B, 100);
       iftDestroyImage(&aux1);
       sprintf(filename, "%s/%s_select.png", out_dir, basename);
       iftWriteImageByExt(aux2, filename);
@@ -195,14 +241,21 @@ int main(int argc, char *argv[])
          afterwards. */
       aux1 = MyAsfCOBin(aux2, 15.0); // iftAsfCOBin(aux2,15.0);
       iftDestroyImage(&aux2);
+      sprintf(filename, "%s/%s_asfCOBin.png", out_dir, basename);
+      iftWriteImageByExt(aux1, filename);
       /* close holes inside the components to allow subsequent erosion
          from the external borders only */
       aux2 = MyCloseBasins(aux1); // iftCloseBasins(aux1,NULL,NULL);
       iftDestroyImage(&aux1);
+      sprintf(filename, "%s/%s_CloseBasins.png", out_dir, basename);
+      iftWriteImageByExt(aux2, filename);
       /* erode components and select the largest one to estimate its
          center as close as possible to the center of the fingerprint */
       iftSet *S = NULL;
       aux1 = MyErodeBin(aux2, &S, 30.0); // iftErodeBin(aux2,&S,30.0);
+
+      sprintf(filename, "%s/%s_ErodeBin.png", out_dir, basename);
+      iftWriteImageByExt(aux1, filename);
       iftDestroySet(&S);
       iftDestroyImage(&aux2);
       aux2 = iftSelectLargestComp(aux1, B);

@@ -20,58 +20,6 @@
    have a four-neighbor inside an object.
  */
 
-struct CostMap
-{
-   int **costs;
-   int size;
-};
-
-struct CostMap *createCostMap(int mapSize)
-{
-   struct CostMap *C = malloc(sizeof(struct CostMap));
-   int **costs = malloc(mapSize * sizeof(int *));
-   C->costs = costs;
-   C->size = mapSize;
-
-   for (int n = 0; n < mapSize; n++)
-   {
-      *costs = NULL;
-   }
-
-   return C;
-}
-
-int destroyCostMap(struct CostMap *C)
-{
-
-   for (int n = 0; n < C->size; n++)
-   {
-      if (C->costs[n] != NULL)
-      {
-         free(C->costs[n]);
-      }
-   }
-   free(C);
-
-   return 0;
-}
-
-void setCost(struct CostMap *C, int n, int cost)
-{
-   if (C->costs[n] == NULL)
-   {
-      C->costs[n] = malloc(sizeof(int));
-   }
-   *C->costs[n] = cost;
-}
-
-int getCost(struct CostMap *C, int n)
-{
-   int cost = *C->costs[n];
-
-   return cost;
-}
-
 /* it returns pixels at the border of the image */
 iftSet *MyImageBorder(iftImage *bin)
 {
@@ -89,46 +37,74 @@ iftSet *MyObjectBorder(iftImage *bin)
 /* it returns a set with external border pixels */
 iftSet *MyBackgroundBorder(iftImage *bin)
 {
-    iftSet *BG_Set = NULL;
-    iftAdjRel *A1 = iftCircular(1.0);
-    int binSize = bin->n;
+   iftSet *BG_Set = NULL;
+   iftAdjRel *A1 = iftCircular(1.0);
+   int binSize = bin->n;
 
-    for (int p = 0; p < binSize; p++)
-    {
-        if (bin->val[p] != 0)
-        {
-            for (int adj_idx = 0; adj_idx <= A1->n; adj_idx++)
+   for (int p = 0; p < binSize; p++)
+   {
+      // Pixel is not background
+      if (bin->val[p] != 0) 
+         continue;
+      for (int adj_idx = 0; adj_idx <= A1->n; adj_idx++)
+      {
+         iftVoxel v_center = iftGetVoxelCoord(bin, p);
+         iftVoxel adj_voxel = iftGetAdjacentVoxel(A1, v_center, adj_idx);
+         if (iftValidVoxel(bin, adj_voxel))
+         {
+            int voxel_idx = iftGetVoxelIndex(bin, adj_voxel);
+            // Adjecent pixel is background 
+            if (bin->val[voxel_idx] == 0)
             {
-                iftVoxel v_center = iftGetVoxelCoord(bin, p);
-                iftVoxel adj_voxel = iftGetAdjacentVoxel(A1, v_center, adj_idx);
-                if (iftValidVoxel(bin, adj_voxel))
-                {
-                    int voxel_idx = iftGetVoxelIndex(bin, adj_voxel);
-                    if (bin->val[voxel_idx] == 0)
-                    {
-                        iftInsertSet(&BG_Set, voxel_idx);
-                    }
-                }
+               iftInsertSet(&BG_Set, voxel_idx);
             }
-        }
-    }
+         }
+      }
+   }
 
-    return BG_Set;
+   iftDestroyAdjRel(&A1);
+   return BG_Set;
 }
 
 iftImage *MyDilateBin(iftImage *bin, iftSet **S, float radius)
 {
    iftImage *dilatedBin = iftCopyImage(bin);
    int n_pixels = bin->n;
-   struct CostMap *C = createCostMap(n_pixels);
+   // struct CostMap *C = createCostMap(n_pixels);
+   int *C = malloc(n_pixels * sizeof(int));
+   int *R = malloc(n_pixels * sizeof(int));
+   iftSet *Q = NULL;
+   // iftSet *R = NULL;
+
+   // Priority queue
+   Q = iftCreateGQueue(1, n_pixels, NULL);
+   // Cost Map
 
    // Get External border
-   S = MyBackgroundBorder(bin);
+   *S = MyBackgroundBorder(bin);
+   if (S == NULL)
+   {
+      printf("EMPTY S\n");
+   }
 
+   iftSet *p = NULL;
+   while (*S != NULL)
+   {
+      p = *S;
+      C[p->elem] = 0;
+      R[p->elem] = p->elem; 
+      *S = p->next;
+      free(p);
+   }
+   printf("CREATED S!\n");
    // Iterate over image
    for (int p = 0; p < n_pixels; p++)
    {
    }
+
+   free(C);
+   free(R);
+
    return dilatedBin;
 }
 
@@ -272,6 +248,7 @@ int main(int argc, char *argv[])
       iftDestroyImage(&orig);
       iftDestroyImage(&norm);
       iftFree(basename);
+      break;
    }
 
    iftDestroyFileSet(&fs);

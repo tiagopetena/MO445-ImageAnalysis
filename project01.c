@@ -44,7 +44,7 @@ iftSet *MyBackgroundBorder(iftImage *bin)
    for (int p = 0; p < binSize; p++)
    {
       // Pixel is not background
-      if (bin->val[p] != 0) 
+      if (bin->val[p] != 0)
          continue;
       for (int adj_idx = 0; adj_idx <= A1->n; adj_idx++)
       {
@@ -53,7 +53,7 @@ iftSet *MyBackgroundBorder(iftImage *bin)
          if (iftValidVoxel(bin, adj_voxel))
          {
             int voxel_idx = iftGetVoxelIndex(bin, adj_voxel);
-            // Adjecent pixel is background 
+            // Adjecent pixel is background
             if (bin->val[voxel_idx] == 0)
             {
                iftInsertSet(&BG_Set, voxel_idx);
@@ -92,7 +92,7 @@ iftImage *MyDilateBin(iftImage *bin, iftSet **S, float radius)
    {
       p = *S;
       C[p->elem] = 0;
-      R[p->elem] = p->elem; 
+      R[p->elem] = p->elem;
       *S = p->next;
       free(p);
    }

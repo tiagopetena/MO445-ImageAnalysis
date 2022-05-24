@@ -23,14 +23,14 @@
 /* it returns pixels at the border of the image */
 iftSet *MyImageBorder(iftImage *bin)
 {
-   iftImage *imgBorder;
+   iftImage *imgBorder = NULL;
    return imgBorder;
 }
 
 /* it returns a set with internal border pixels */
 iftSet *MyObjectBorder(iftImage *bin)
 {
-   iftImage *objBorder;
+   iftImage *objBorder = NULL;
    return objBorder;
 }
 
@@ -39,7 +39,11 @@ iftSet *MyBackgroundBorder(iftImage *bin)
 {
    iftSet *BG_Set = NULL;
    iftAdjRel *A1 = iftCircular(1.0);
+   iftVoxel bg_voxel, adj_voxel;
    int binSize = bin->n;
+
+   int *InSet = malloc(binSize * sizeof(int));
+   memset(InSet, 0, binSize * sizeof(int));
 
    for (int p = 0; p < binSize; p++)
    {
@@ -48,21 +52,24 @@ iftSet *MyBackgroundBorder(iftImage *bin)
          continue;
       for (int adj_idx = 0; adj_idx <= A1->n; adj_idx++)
       {
-         iftVoxel v_center = iftGetVoxelCoord(bin, p);
-         iftVoxel adj_voxel = iftGetAdjacentVoxel(A1, v_center, adj_idx);
+         bg_voxel = iftGetVoxelCoord(bin, p);
+         adj_voxel = iftGetAdjacentVoxel(A1, bg_voxel, adj_idx);
          if (iftValidVoxel(bin, adj_voxel))
          {
             int voxel_idx = iftGetVoxelIndex(bin, adj_voxel);
             // Adjecent pixel is background
-            if (bin->val[voxel_idx] == 0)
+            if (bin->val[voxel_idx] == 0 && InSet[voxel_idx] != 1)
             {
                iftInsertSet(&BG_Set, voxel_idx);
+               InSet[voxel_idx] = 1;
             }
          }
       }
    }
 
+   free(InSet);
    iftDestroyAdjRel(&A1);
+
    return BG_Set;
 }
 
@@ -70,22 +77,18 @@ iftImage *MyDilateBin(iftImage *bin, iftSet **S, float radius)
 {
    iftImage *dilatedBin = iftCopyImage(bin);
    int n_pixels = bin->n;
-   // struct CostMap *C = createCostMap(n_pixels);
+   // Cost map
    int *C = malloc(n_pixels * sizeof(int));
+   memset(C, -1, n_pixels * sizeof(int));
+   // Root map
    int *R = malloc(n_pixels * sizeof(int));
-   iftSet *Q = NULL;
-   // iftSet *R = NULL;
-
+   memset(R, 0, n_pixels * sizeof(int));
    // Priority queue
-   Q = iftCreateGQueue(1, n_pixels, NULL);
-   // Cost Map
+   iftGQueue *Q = NULL;
+   Q = iftCreateGQueue(n_pixels, n_pixels, NULL);
 
    // Get External border
    *S = MyBackgroundBorder(bin);
-   if (S == NULL)
-   {
-      printf("EMPTY S\n");
-   }
 
    iftSet *p = NULL;
    while (*S != NULL)
@@ -93,10 +96,18 @@ iftImage *MyDilateBin(iftImage *bin, iftSet **S, float radius)
       p = *S;
       C[p->elem] = 0;
       R[p->elem] = p->elem;
+      iftInsertGQueue(Q, p->elem);
       *S = p->next;
       free(p);
    }
-   printf("CREATED S!\n");
+   
+   
+   while (!iftIsIntQueueEmpty(Q))
+   {
+      int cp = Q->C.first[0]
+      int p = iftRemoveGQueue(Q);
+
+   }
    // Iterate over image
    for (int p = 0; p < n_pixels; p++)
    {
@@ -104,6 +115,7 @@ iftImage *MyDilateBin(iftImage *bin, iftSet **S, float radius)
 
    free(C);
    free(R);
+   iftDestroyIntQueue(&Q);
 
    return dilatedBin;
 }
@@ -125,6 +137,7 @@ iftImage *MyCloseBin(iftImage *bin, float radius)
    closedBin = MyErodeBin(dilatedBin, &S, radius);
 
    free(dilatedBin);
+   iftDestroySet(&S);
 
    return closedBin;
 }
@@ -139,6 +152,7 @@ iftImage *MyOpenBin(iftImage *bin, float radius)
    openBin = MyDilateBin(erodedBin, &S, radius);
 
    free(erodedBin);
+   iftDestroySet(&S);
 
    return openBin;
 }
@@ -206,29 +220,29 @@ int main(int argc, char *argv[])
       /* remove noise components from the background */
       iftImage *aux2 = iftSelectCompAboveArea(aux1, B, 100);
       iftDestroyImage(&aux1);
-      sprintf(filename, "%s/%s_select.png", out_dir, basename);
-      iftWriteImageByExt(aux2, filename);
+      // sprintf(filename, "%s/%s_select.png", out_dir, basename);
+      // iftWriteImageByExt(aux2, filename);
 
       /* apply morphological filtering to make the fingerprint the
          largest component: this operation must add frame and remove it
          afterwards. */
       aux1 = MyAsfCOBin(aux2, 15.0); // iftAsfCOBin(aux2,15.0);
       iftDestroyImage(&aux2);
-      sprintf(filename, "%s/%s_asfCOBin.png", out_dir, basename);
-      iftWriteImageByExt(aux1, filename);
+      // sprintf(filename, "%s/%s_asfCOBin.png", out_dir, basename);
+      // iftWriteImageByExt(aux1, filename);
       /* close holes inside the components to allow subsequent erosion
          from the external borders only */
       aux2 = MyCloseBasins(aux1); // iftCloseBasins(aux1,NULL,NULL);
       iftDestroyImage(&aux1);
-      sprintf(filename, "%s/%s_CloseBasins.png", out_dir, basename);
-      iftWriteImageByExt(aux2, filename);
+      // sprintf(filename, "%s/%s_CloseBasins.png", out_dir, basename);
+      // iftWriteImageByExt(aux2, filename);
       /* erode components and select the largest one to estimate its
          center as close as possible to the center of the fingerprint */
       iftSet *S = NULL;
       aux1 = MyErodeBin(aux2, &S, 30.0); // iftErodeBin(aux2,&S,30.0);
 
-      sprintf(filename, "%s/%s_ErodeBin.png", out_dir, basename);
-      iftWriteImageByExt(aux1, filename);
+      // sprintf(filename, "%s/%s_ErodeBin.png", out_dir, basename);
+      // iftWriteImageByExt(aux1, filename);
       iftDestroySet(&S);
       iftDestroyImage(&aux2);
       aux2 = iftSelectLargestComp(aux1, B);
@@ -248,6 +262,7 @@ int main(int argc, char *argv[])
       iftDestroyImage(&orig);
       iftDestroyImage(&norm);
       iftFree(basename);
+      printf("Done %d images.\n", i + 1);
       break;
    }
 

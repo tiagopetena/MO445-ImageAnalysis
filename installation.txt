@@ -34,7 +34,7 @@ pip install torch-summary
 pip install torch-snippets
 conda install keras
 conda install tensorflow
-condda install jupyter
+conda install jupyter
 pip install  scikit-learn
 pip install pydot
 pip install graphicviz

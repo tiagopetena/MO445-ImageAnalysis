@@ -108,7 +108,8 @@ iftImage *MyDilateBin(iftImage *bin, iftSet **S, float radius)
    Q = iftCreateGQueue(bin->n + 1, bin->n, C->val);
 
    // Get External border
-   *S = MyObjectBorder(bin);
+   if (*S == NULL)
+      *S = MyObjectBorder(bin);
 
    // Inint costs and root maps
    for (int p = 0; p < bin->n; p++)
@@ -195,7 +196,8 @@ iftImage *MyErodeBin(iftImage *bin, iftSet **S, float radius)
    Q = iftCreateGQueue(bin->n + 1, bin->n, C->val);
 
    // Get External border
-   *S = MyBackgroundBorder(bin);
+   if (*S == NULL)
+      *S = MyBackgroundBorder(bin);
 
    // Inint costs and root maps
    for (int p = 0; p < bin->n; p++)

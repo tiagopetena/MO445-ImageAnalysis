@@ -299,14 +299,21 @@ iftImage *MyOpenBin(iftImage *bin, float radius)
 /* it executes closing followed by opening */
 iftImage *MyAsfCOBin(iftImage *bin, float radius)
 {
-   iftImage *closedBin, *asfCOBin;
+   iftImage *closedBin, *COBin, *framedBin, *openedBin;
+   int frame_size = 1;
+   int frame_value = 1;
 
-   closedBin = MyCloseBin(bin, radius);
-   asfCOBin = MyOpenBin(closedBin, radius);
+   framedBin = iftAddFrame(bin, frame_size, frame_value);
+   closedBin = MyCloseBin(framedBin, radius);
+   openedBin = MyOpenBin(closedBin, radius);
+   
+   COBin = iftRemFrame(openedBin, frame_size);
 
+   iftDestroyImage(&openedBin);
+   iftDestroyImage(&framedBin);
    iftDestroyImage(&closedBin);
 
-   return asfCOBin;
+   return COBin;
 }
 
 /* it closes holes in objects */

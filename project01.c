@@ -31,8 +31,35 @@ iftSet *MyImageBorder(iftImage *bin)
 /* it returns a set with external border pixels */
 iftSet *MyBackgroundBorder(iftImage *bin)
 {
-   iftSet *objBorder = NULL;
-   return objBorder;
+   iftSet *S = NULL;
+   iftAdjRel *A1 = iftCircular(1.0);
+   iftVoxel p_voxel, q_voxel;
+   int binSize = bin->n;
+
+   for (int p = 0; p < binSize; p++)
+   {
+      if (bin->val[p] != 0)
+         continue;
+      for (int adj_idx = 0; adj_idx <= A1->n; adj_idx++)
+      {
+         p_voxel = iftGetVoxelCoord(bin, p);
+         q_voxel = iftGetAdjacentVoxel(A1, p_voxel, adj_idx);
+         if (iftValidVoxel(bin, q_voxel))
+         {
+            int q_idx = iftGetVoxelIndex(bin, q_voxel);
+            int p_idx = iftGetVoxelIndex(bin, p_voxel);
+            // Adjecent pixel is background
+            if (bin->val[q_idx] != 0)
+            {
+               iftInsertSet(&S, p_idx);
+            }
+         }
+      }
+   }
+
+   iftDestroyAdjRel(&A1);
+
+   return S;
 }
 
 /* it returns a set with internal border pixels */

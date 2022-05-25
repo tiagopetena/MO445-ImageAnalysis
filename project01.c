@@ -71,42 +71,32 @@ iftSet *MyObjectBorder(iftImage *bin)
 
 iftImage *MyDilateBin(iftImage *bin, iftSet **S, float radius)
 {
-   printf("Dilating image...\n");
    iftImage *D = iftCopyImage(bin);
    int sqr_radius = pow(radius,2);
-   iftAdjRel *Asqrt = iftCircular(1.5);
-   // Cost map
+   iftAdjRel *Asqrt = iftCircular(sqrt(2));
    iftImage *C = NULL;
    iftImage *R = NULL;
+   iftGQueue *Q = NULL;
    C = iftCreateImage(bin->xsize, bin->ysize, bin->zsize);
    R = iftCreateImage(bin->xsize, bin->ysize, bin->zsize);
    // Queue parameters
-   int binMax = iftMaximumValue(bin);
-   int maxCost = binMax * binMax;
    // Priority queue
-   iftGQueue *Q = NULL;
-   Q = iftCreateGQueue(bin->n, bin->n, C->val);
+   Q = iftCreateGQueue(bin->n + 1, bin->n, C->val);
 
    // Get External border
-   printf("Getting extenal border...\n");
    *S = MyObjectBorder(bin);
-   printf("Got extenal border!\n");
-   // // // // Save border
-   iftImage *BG = iftCopyImage(bin);
-   BG = iftGrayImageToColorImage(BG, iftGrayColorTable(256));
-   for (iftSet *v_bg = *S; v_bg != NULL; v_bg = v_bg->next)
-   {
-      BG->Cr[v_bg->elem] = 256;
-   }
-   iftWriteImageByExt(BG, "backgroung/bg.png");
-
-
-   printf("Initing Costs, roots and priority...\n");
+   
+   // Inint costs and root maps
    for (int p = 0; p < bin->n; p++)
    {
       C->val[p] = INT_MAX;
       R->val[p] = p;
    }
+   
+   // Set cost = 0 &
+   //     root as itself
+   // for internal border pixels
+   // All min costs at queue start with C=0
    int p = 0;
    while (*S != NULL)
    {
@@ -115,11 +105,8 @@ iftImage *MyDilateBin(iftImage *bin, iftSet **S, float radius)
       R->val[p] = p;
       iftInsertGQueue(&Q, p);
    }
-   printf("Done\n");
-
-   // Cost in background = 0
-   // else inf
-   printf("Dilating...\n");
+   
+   // Dilate
    while (!iftEmptyGQueue(Q))
    {
       int p = iftRemoveGQueue(Q);
@@ -131,9 +118,10 @@ iftImage *MyDilateBin(iftImage *bin, iftSet **S, float radius)
          {
             iftVoxel p_voxel = iftGetVoxelCoord(D, p);
             iftVoxel q_voxel = iftGetAdjacentVoxel(Asqrt, p_voxel, adj_idx);
-
+            
             if (!iftValidVoxel(D, q_voxel))
                continue;
+            
             int q = iftGetVoxelIndex(D, q_voxel);
             if (C->val[q] > C->val[p] && bin->val[q] == 0)
             {
@@ -141,7 +129,7 @@ iftImage *MyDilateBin(iftImage *bin, iftSet **S, float radius)
                int tmp = pow(p_voxel.x - rp.x, 2) + pow(p_voxel.y - rp.y, 2);
                if (tmp < C->val[q])
                {
-                  if (Q->L.elem[q].color == IFT_GRAY)
+                  if (Q->L.elem[0].color == IFT_GRAY)
                      iftRemoveGQueue(Q);
                   C->val[q] = tmp;
                   R->val[q] = R->val[p];
@@ -153,21 +141,12 @@ iftImage *MyDilateBin(iftImage *bin, iftSet **S, float radius)
       else
       {
          iftInsertSet(S, p);
-         printf("INSERTING\n");
       }
    }
-   printf("DONE DILATION!\n");
 
    // sprintf(filename, "dilation/%s_dilated.png", out_dir, basename);
    iftWriteImageByExt(D, "dilation/dilated.png");
    iftWriteImageByExt(bin, "dilation/non_dilated.png");
-
-   D = iftGrayImageToColorImage(D, iftGrayColorTable(256));
-   for (iftSet *v_bg = *S; v_bg != NULL; v_bg = v_bg->next)
-   {
-      D->Cr[v_bg->elem] = 256;
-   }
-   iftWriteImageByExt(D, "dilation/ddd.png");
 
    free(C);
    free(R);

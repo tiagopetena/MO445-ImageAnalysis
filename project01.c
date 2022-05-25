@@ -99,7 +99,7 @@ iftSet *MyObjectBorder(iftImage *bin)
 iftImage *MyDilateBin(iftImage *bin, iftSet **S, float radius)
 {
    iftImage *D = iftCopyImage(bin);
-   int sqr_radius = pow(radius,2);
+   int radius2 = pow(radius,2);
    iftAdjRel *Asqrt = iftCircular(sqrt(2));
    iftImage *C = NULL;
    iftImage *R = NULL;
@@ -137,7 +137,7 @@ iftImage *MyDilateBin(iftImage *bin, iftSet **S, float radius)
    while (!iftEmptyGQueue(Q))
    {
       int p = iftRemoveGQueue(Q);
-      if (C->val[p] <= sqr_radius)
+      if (C->val[p] <= radius2)
       {
          D->val[p] = bin->val[R->val[p]];
 
@@ -156,8 +156,8 @@ iftImage *MyDilateBin(iftImage *bin, iftSet **S, float radius)
                int tmp = pow(p_voxel.x - rp.x, 2) + pow(p_voxel.y - rp.y, 2);
                if (tmp < C->val[q])
                {
-                  if (Q->L.elem[0].color == IFT_GRAY)
-                     iftRemoveGQueue(Q);
+                  if (Q->L.elem[q].color == IFT_GRAY)
+                     iftRemoveGQueueElem(Q, q);
                   C->val[q] = tmp;
                   R->val[q] = R->val[p];
                   iftInsertGQueue(&Q, q);
@@ -171,14 +171,12 @@ iftImage *MyDilateBin(iftImage *bin, iftSet **S, float radius)
       }
    }
 
-   // sprintf(filename, "dilation/%s_dilated.png", out_dir, basename);
    iftWriteImageByExt(D, "dilation/dilated.png");
    iftWriteImageByExt(bin, "dilation/non_dilated.png");
 
    free(C);
    free(R);
    iftDestroyIntQueue(&Q);
-   exit(-1);
 
    return D;
 }
@@ -186,8 +184,87 @@ iftImage *MyDilateBin(iftImage *bin, iftSet **S, float radius)
 /* it erodes objects */
 iftImage *MyErodeBin(iftImage *bin, iftSet **S, float radius)
 {
-   iftImage *erodedBin = iftCopyImage(bin);
-   return erodedBin;
+   iftImage *D = iftCopyImage(bin);
+   int radius2 = pow(radius,2);
+   iftAdjRel *Asqrt = iftCircular(sqrt(2));
+   iftImage *C = NULL;
+   iftImage *R = NULL;
+   iftGQueue *Q = NULL;
+   C = iftCreateImage(bin->xsize, bin->ysize, bin->zsize);
+   R = iftCreateImage(bin->xsize, bin->ysize, bin->zsize);
+   // Queue parameters
+   // Priority queue
+   Q = iftCreateGQueue(bin->n + 1, bin->n, C->val);
+
+   // Get External border
+   *S = MyBackgroundBorder(bin);
+   
+   // Inint costs and root maps
+   for (int p = 0; p < bin->n; p++)
+   {
+      C->val[p] = INT_MAX;
+      R->val[p] = p;
+   }
+   
+   // Set cost = 0 &
+   //     root as itself
+   // for internal border pixels
+   // All min costs at queue start with C=0
+   int p = 0;
+   while (*S != NULL)
+   {
+      p = iftRemoveSet(S);
+      C->val[p] = 0;
+      R->val[p] = p;
+      iftInsertGQueue(&Q, p);
+   }
+   
+   // Dilate
+   while (!iftEmptyGQueue(Q))
+   {
+      int p = iftRemoveGQueue(Q);
+      if (C->val[p] <= radius2)
+      {
+         D->val[p] = bin->val[R->val[p]];
+
+         for (int adj_idx = 0; adj_idx <= Asqrt->n; adj_idx++)
+         {
+            iftVoxel p_voxel = iftGetVoxelCoord(D, p);
+            iftVoxel q_voxel = iftGetAdjacentVoxel(Asqrt, p_voxel, adj_idx);
+            
+            if (!iftValidVoxel(D, q_voxel))
+               continue;
+            
+            int q = iftGetVoxelIndex(D, q_voxel);
+            if (C->val[q] > C->val[p] && bin->val[q] != 0)
+            {
+               iftVoxel rp = iftGetVoxelCoord(D, R->val[p]);
+               int tmp = pow(p_voxel.x - rp.x, 2) + pow(p_voxel.y - rp.y, 2);
+               if (tmp < C->val[q])
+               {
+                  if (Q->L.elem[q].color == IFT_GRAY)
+                     iftRemoveGQueueElem(Q, q);
+                  C->val[q] = tmp;
+                  R->val[q] = R->val[p];
+                  iftInsertGQueue(&Q, q);
+               }
+            }
+         }
+      }
+      else
+      {
+         iftInsertSet(S, p);
+      }
+   }
+
+   iftWriteImageByExt(D, "erosion/eroded.png");
+   iftWriteImageByExt(bin, "erosion/non_eroded.png");
+
+   free(C);
+   free(R);
+   iftDestroyIntQueue(&Q);
+
+   return D;
 }
 
 /* it executes dilation followed by erosion */

@@ -115,7 +115,7 @@ iftImage *MyDilateBin(iftImage *bin, iftSet **S, float radius)
    for (int p = 0; p < bin->n; p++)
    {
       C->val[p] = INT_MAX;
-      R->val[p] = p;
+      R->val[p] = -1;
    }
 
    // Set cost = 0 &
@@ -151,7 +151,7 @@ iftImage *MyDilateBin(iftImage *bin, iftSet **S, float radius)
             if (C->val[q] > C->val[p] && bin->val[q] == 0)
             {
                iftVoxel rp = iftGetVoxelCoord(D, R->val[p]);
-               int tmp = pow(p_voxel.x - rp.x, 2) + pow(p_voxel.y - rp.y, 2);
+               int tmp = pow(q_voxel.x - rp.x, 2) + pow(q_voxel.y - rp.y, 2);
                if (tmp < C->val[q])
                {
                   if (Q->L.elem[q].color == IFT_GRAY)
@@ -203,7 +203,7 @@ iftImage *MyErodeBin(iftImage *bin, iftSet **S, float radius)
    for (int p = 0; p < bin->n; p++)
    {
       C->val[p] = INT_MAX;
-      R->val[p] = p;
+      R->val[p] = -1;
    }
 
    // Set cost = 0 &
@@ -239,7 +239,7 @@ iftImage *MyErodeBin(iftImage *bin, iftSet **S, float radius)
             if (C->val[q] > C->val[p] && bin->val[q] != 0)
             {
                iftVoxel rp = iftGetVoxelCoord(D, R->val[p]);
-               int tmp = pow(p_voxel.x - rp.x, 2) + pow(p_voxel.y - rp.y, 2);
+               int tmp = pow(q_voxel.x - rp.x, 2) + pow(q_voxel.y - rp.y, 2);
                if (tmp < C->val[q])
                {
                   if (Q->L.elem[q].color == IFT_GRAY)
@@ -302,8 +302,8 @@ iftImage *MyOpenBin(iftImage *bin, float radius)
 iftImage *MyAsfCOBin(iftImage *bin, float radius)
 {
    iftImage *closedBin, *COBin, *framedBin, *openedBin;
-   int frame_size = 1;
-   int frame_value = 1;
+   int frame_size = radius + 1;
+   int frame_value = 0;
 
    framedBin = iftAddFrame(bin, frame_size, frame_value);
    closedBin = MyCloseBin(framedBin, radius);

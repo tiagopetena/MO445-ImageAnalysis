@@ -3,34 +3,34 @@
 /* it returns a set with external border pixels */
 iftSet *MyBackgroundBorder(iftImage *bin)
 {
-    iftSet *BG_Set = NULL;
-    iftAdjRel *A1 = iftCircular(1.0);
-    int binSize = bin->n;
+   iftSet *S = NULL;
+   iftAdjRel *A1 = iftCircular(1.0);
+   iftVoxel p_voxel, q_voxel;
+   int binSize = bin->n;
 
-    for (int p = 0; p < binSize; p++)
-    {
-        if (bin->val[p] != 0)
-        {
-            for (int adj_idx = 0; adj_idx <= A1->n; adj_idx++)
+   for (int p = 0; p < binSize; p++)
+   {
+      if (bin->val[p] != 0)
+         continue;
+      for (int adj_idx = 0; adj_idx <= A1->n; adj_idx++)
+      {
+         p_voxel = iftGetVoxelCoord(bin, p);
+         q_voxel = iftGetAdjacentVoxel(A1, p_voxel, adj_idx);
+         if (iftValidVoxel(bin, q_voxel))
+         {
+            int q_idx = iftGetVoxelIndex(bin, q_voxel);
+            // Adjecent pixel is not background
+            if (bin->val[q_idx] != 0)
             {
-                // printf("ADJ\n");
-                iftVoxel v_center = iftGetVoxelCoord(bin, p);
-                iftVoxel adj_voxel = iftGetAdjacentVoxel(A1, v_center, adj_idx);
-                // printf("got %d\n", adj_voxel.t);
-                if (iftValidVoxel(bin, adj_voxel))
-                {
-                    int voxel_idx = iftGetVoxelIndex(bin, adj_voxel);
-                    if (bin->val[voxel_idx] == 0)
-                    {
-                        // printf("Inserting\n");
-                        iftInsertSet(&BG_Set, voxel_idx);
-                    }
-                }
+               iftInsertSet(&S, p);
             }
-        }
-    }
+         }
+      }
+   }
 
-    return BG_Set;
+   iftDestroyAdjRel(&A1);
+
+   return S;
 }
 
 int main(int argc, char *argv[])
